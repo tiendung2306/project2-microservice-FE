@@ -1,14 +1,29 @@
 <script setup lang="ts">
+import router from '@/router'
+import { login } from '@/services/auth/authService'
 import { Password } from 'primevue'
 import Button from 'primevue/button'
 import InputText from 'primevue/inputtext'
 import { ref } from 'vue'
 
-const username = ref('')
+const email = ref('')
 const password = ref('')
 
-const onLogin = () => {
-  console.log(username.value, password.value)
+const onLogin = async () => {
+  if (email.value === '' || password.value === '') {
+    alert('Please fill in all fields')
+    return
+  }
+
+  login(email.value, password.value)
+    .then((response) => {
+      console.log('Login status:', response)
+      router.push('/')
+    })
+    .catch((error) => {
+      console.error('Error during login:', error)
+      alert('An error occurred during login')
+    })
 }
 </script>
 
@@ -19,11 +34,11 @@ const onLogin = () => {
     <div class="text-3xl">Login</div>
     <form class="space-y-2">
       <div>
-        <label for="username" class="block text-sm font-medium text-gray-700">Username</label>
+        <label for="email" class="block text-sm font-medium text-gray-700">Email</label>
         <div class="mt-1">
           <InputText
-            id="username"
-            v-model="username"
+            id="email"
+            v-model="email"
             class="block w-full px-3 py-2 placeholder-gray-400 border border-gray-300 rounded-md shadow-sm appearance-none focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
           />
         </div>
