@@ -340,9 +340,7 @@ const cancelDescription = () => {
 .dialog-content {
   max-height: inherit;
 }
-.custom-header {
-  background-color: #f9fafb;
-}
+
 .custom-header .p-button {
   width: 2.25rem;
   height: 2.25rem;
