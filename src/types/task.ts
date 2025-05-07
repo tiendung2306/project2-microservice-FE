@@ -4,8 +4,8 @@ export type Task = {
   title: string
   content: string
   status: string
-  // startDate: string
-  // dueDate: string
+  startDate: Date
+  dueDate: Date
   // createdAt: string
   // updatedAt: string
 }
