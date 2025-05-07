@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, type Ref } from 'vue'
+import { ref, type Ref, computed } from 'vue'
 import Splitter from 'primevue/splitter'
 import SplitterPanel from 'primevue/splitterpanel'
 import TaskItem from '@/components/task/TaskItem.vue' // Đảm bảo đường dẫn đúng
@@ -21,12 +21,16 @@ const todoTasks = ref<Task[]>([
     content:
       '- API đăng nhập đăng ký, quên mật khẩu\n- Dùng jwt\n- Có refresh token\n- Có xác thực email\n- Có xác thực số điện thoại\nasd\ngewywywy\nwey4uyehe\nerheherhrh\nhwrheut\n\nddd',
     status: 'To Do',
+    startDate: new Date('2023-10-01'),
+    dueDate: new Date('2023-10-05'),
   },
   {
     id: 2,
     title: 'Setup Project',
     content: '- Cài đặt Vue + Vite\n- Thêm PrimeVue\n- Cấu hình ESLint, Prettier',
     status: 'To Do',
+    startDate: new Date('2023-10-02'),
+    dueDate: new Date('2023-10-06'),
   },
   {
     id: 3,
@@ -34,12 +38,16 @@ const todoTasks = ref<Task[]>([
     content:
       '- API đăng nhập đăng ký, quên mật khẩu\n- Dùng jwt\n- Có refresh token\n- Có xác thực email\n- Có xác thực số điện thoại\nasd\ngewywywy\nwey4uyehe\nerheherhrh\nhwrheut\n\nddd',
     status: 'To Do',
+    startDate: new Date('2023-10-03'),
+    dueDate: new Date('2023-10-07'),
   },
   {
     id: 4,
     title: 'Setup Project',
     content: '- Cài đặt Vue + Vite\n- Thêm PrimeVue\n- Cấu hình ESLint, Prettier',
     status: 'To Do',
+    startDate: new Date('2023-10-04'),
+    dueDate: new Date('2023-10-08'),
   },
   {
     id: 5,
@@ -47,25 +55,35 @@ const todoTasks = ref<Task[]>([
     content:
       '- API đăng nhập đăng ký, quên mật khẩu\n- Dùng jwt\n- Có refresh token\n- Có xác thực email\n- Có xác thực số điện thoại\nasd\ngewywywy\nwey4uyehe\nerheherhrh\nhwrheut\n\nddd',
     status: 'To Do',
+    startDate: new Date('2023-10-05'),
+    dueDate: new Date('2023-10-09'),
   },
   {
     id: 6,
     title: 'Setup Project',
     content: '- Cài đặt Vue + Vite\n- Thêm PrimeVue\n- Cấu hình ESLint, Prettier',
     status: 'To Do',
+    startDate: new Date('2023-10-06'),
+    dueDate: new Date('2023-10-10'),
   },
 ])
 
 const inProgressTasks = ref<Task[]>([
   {
-    id: 1,
+    id: 7,
     title: 'Thiết kế UI Kanban',
     content: '- Sử dụng Splitter\n- Thiết kế TaskItem Card\n- Thiết kế Dialog chi tiết',
     status: 'In Progress',
+    startDate: new Date('2023-10-07'),
+    dueDate: new Date('2023-10-11'),
   },
 ])
 
 const doneTasks = ref<Task[]>([])
+
+const sortedTodoTasks = computed(() => [...todoTasks.value].sort((a, b) => b.id - a.id))
+const sortedInProgressTasks = computed(() => [...inProgressTasks.value].sort((a, b) => b.id - a.id))
+const sortedDoneTasks = computed(() => [...doneTasks.value].sort((a, b) => b.id - a.id))
 
 // --- Hàm xử lý sự kiện cập nhật từ TaskItem ---
 
@@ -152,10 +170,28 @@ function onAddTask(statusIndex: 0 | 1 | 2) {
     title: `New Task (${status})`,
     content: '',
     status: status,
+    startDate: new Date(),
+    dueDate: new Date(new Date().setDate(new Date().getDate() + 7)), // 7 ngày sau
   }
 
   targetList.value.push(newTask)
   console.log(`Added new task to ${status}`)
+}
+
+const handleUpdateStartDate = (taskId: number, newStartDate: Date) => {
+  const { task } = findTaskAndList(taskId)
+  if (task) {
+    task.startDate = newStartDate
+    console.log(`Updated startDate for task ${taskId}`)
+  }
+}
+
+const handleUpdateDueDate = (taskId: number, newDueDate: Date) => {
+  const { task } = findTaskAndList(taskId)
+  if (task) {
+    task.dueDate = newDueDate
+    console.log(`Updated dueDate for task ${taskId}`)
+  }
 }
 </script>
 
@@ -181,14 +217,18 @@ function onAddTask(statusIndex: 0 | 1 | 2) {
         <div class="flex flex-col gap-3 p-3 overflow-y-auto flex-grow">
           <!-- 3. Sử dụng v-for -->
           <TaskItem
-            v-for="task in todoTasks"
+            v-for="task in sortedTodoTasks"
             :key="task.id"
             :title="task.title"
             :content="task.content"
             :status="task.status"
+            :startDate="task.startDate"
+            :dueDate="task.dueDate"
             @update:title="handleUpdateTitle(task.id, $event)"
             @update:content="handleUpdateContent(task.id, $event)"
             @update:status="handleUpdateStatus(task.id, $event)"
+            @update:startDate="handleUpdateStartDate(task.id, $event)"
+            @update:dueDate="handleUpdateDueDate(task.id, $event)"
           />
           <div v-if="todoTasks.length === 0" class="text-center text-gray-400 text-sm mt-4">
             No tasks
@@ -213,14 +253,18 @@ function onAddTask(statusIndex: 0 | 1 | 2) {
         <!-- Task List -->
         <div class="flex flex-col gap-3 p-3 overflow-y-auto flex-grow">
           <TaskItem
-            v-for="task in inProgressTasks"
+            v-for="task in sortedInProgressTasks"
             :key="task.id"
             :title="task.title"
             :content="task.content"
             :status="task.status"
+            :startDate="task.startDate"
+            :dueDate="task.dueDate"
             @update:title="handleUpdateTitle(task.id, $event)"
             @update:content="handleUpdateContent(task.id, $event)"
             @update:status="handleUpdateStatus(task.id, $event)"
+            @update:startDate="handleUpdateStartDate(task.id, $event)"
+            @update:dueDate="handleUpdateDueDate(task.id, $event)"
           />
           <div v-if="inProgressTasks.length === 0" class="text-center text-gray-400 text-sm mt-4">
             No tasks
@@ -245,14 +289,18 @@ function onAddTask(statusIndex: 0 | 1 | 2) {
         <!-- Task List -->
         <div class="flex flex-col gap-3 p-3 overflow-y-auto flex-grow">
           <TaskItem
-            v-for="task in doneTasks"
+            v-for="task in sortedDoneTasks"
             :key="task.id"
             :title="task.title"
             :content="task.content"
             :status="task.status"
+            :startDate="task.startDate"
+            :dueDate="task.dueDate"
             @update:title="handleUpdateTitle(task.id, $event)"
             @update:content="handleUpdateContent(task.id, $event)"
             @update:status="handleUpdateStatus(task.id, $event)"
+            @update:startDate="handleUpdateStartDate(task.id, $event)"
+            @update:dueDate="handleUpdateDueDate(task.id, $event)"
           />
           <div v-if="doneTasks.length === 0" class="text-center text-gray-400 text-sm mt-4">
             No tasks
@@ -267,22 +315,6 @@ function onAddTask(statusIndex: 0 | 1 | 2) {
 /* Thêm style nếu cần, ví dụ đảm bảo chiều cao và scroll */
 .card {
   padding: 1rem; /* Hoặc padding khác tùy layout tổng thể */
-}
-
-/* Điều chỉnh giao diện Splitter nếu cần */
-:deep(.p-splitter) {
-  /* Ví dụ: */
-  /* border-color: #ccc; */
-}
-
-:deep(.p-splitter-panel) {
-  /* overflow: hidden; */ /* Có thể cần nếu không muốn panel tự scroll */
-}
-
-/* Style cho phần chứa list task để đảm bảo scroll */
-.flex-col .overflow-y-auto {
-  /* Ví dụ: đặt chiều cao tối đa hoặc để flex-grow xử lý */
-  /* max-height: calc(100vh - YOUR_HEADER_HEIGHT - YOUR_SPLITTER_PANEL_HEADER_HEIGHT - PADDINGS); */
 }
 
 /* Style cho nút add task */

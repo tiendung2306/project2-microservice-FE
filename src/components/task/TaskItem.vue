@@ -12,10 +12,18 @@ const props = defineProps({
     required: true,
     validator: (value: string) => ['To Do', 'In Progress', 'Done'].includes(value),
   },
+  startDate: { type: Date, required: true },
+  dueDate: { type: Date, required: true },
 })
 
 // 2. Thêm emits cho title và content
-const emit = defineEmits(['update:status', 'update:title', 'update:content'])
+const emit = defineEmits([
+  'update:status',
+  'update:title',
+  'update:content',
+  'update:startDate',
+  'update:dueDate',
+])
 
 // --- State ---
 const dialogVisible = ref(false)
@@ -31,6 +39,28 @@ const isEditingTitle = ref(false)
 const editingTitle = ref('')
 const isEditingDescription = ref(false)
 const editingDescription = ref('')
+
+// State for editing dates
+const editingStartDate = ref('')
+const editingDueDate = ref('')
+
+// State for toggling date editing
+const isEditingDates = ref(false)
+
+// Method to toggle date editing
+const toggleDateEditing = () => {
+  if (!isEditingDates.value) {
+    // Initialize editingStartDate and editingDueDate with props values as strings
+    editingStartDate.value = props.startDate.toISOString().split('T')[0]
+    editingDueDate.value = props.dueDate.toISOString().split('T')[0]
+  }
+  isEditingDates.value = !isEditingDates.value
+}
+
+// Computed property to check if dueDate is overdue (exclude 'Done' tasks)
+const isDueDateOverdue = computed(() => {
+  return props.status !== 'Done' && props.dueDate < new Date()
+})
 
 // --- Computed ---
 const currentStatusLabel = computed(() => {
@@ -50,6 +80,24 @@ const openDialog = () => {
   editingDescription.value = props.content
   dialogVisible.value = true
 }
+
+// Methods to save or cancel date changes
+const saveDates = () => {
+  const newStartDate = new Date(editingStartDate.value)
+  const newDueDate = new Date(editingDueDate.value)
+
+  if (newStartDate.getTime() !== props.startDate.getTime()) {
+    emit('update:startDate', newStartDate)
+  }
+  if (newDueDate.getTime() !== props.dueDate.getTime()) {
+    emit('update:dueDate', newDueDate)
+  }
+}
+
+// const resetDates = () => {
+//   editingStartDate.value = props.startDate.toISOString().split('T')[0]
+//   editingDueDate.value = props.dueDate.toISOString().split('T')[0]
+// }
 
 // Watchers
 watch(selectedStatus, (newStatus, oldStatus) => {
@@ -109,8 +157,22 @@ const cancelDescription = () => {
       </p>
     </template>
     <template #footer>
+      <!-- Hiển thị startDate và dueDate -->
+      <div class="task-dates flex items-center justify-between text-xs text-gray-500 mt-2">
+        <div class="flex items-center gap-1">
+          <i class="pi pi-calendar text-gray-400 text-sm"></i>
+          <span>Start: {{ props.startDate.toLocaleDateString() }}</span>
+        </div>
+        <div
+          class="flex items-center gap-1"
+          :class="{ 'text-red-500 font-semibold': isDueDateOverdue }"
+        >
+          <i class="pi pi-clock text-gray-400 text-sm"></i>
+          <span>Due: {{ props.dueDate.toLocaleDateString() }}</span>
+        </div>
+      </div>
       <div
-        class="status-indicator"
+        class="status-indicator mt-1 text-xs"
         :class="`status-${props.status.toLowerCase().replace(' ', '-')}`"
       >
         {{ currentStatusLabel }}
@@ -191,6 +253,67 @@ const cancelDescription = () => {
 
       <!-- Body của Dialog -->
       <div class="dialog-body flex-grow p-6 overflow-y-auto flex flex-col gap-6">
+        <!-- Hiển thị và chỉnh sửa startDate và dueDate -->
+        <div class="date-section bg-gray-50 p-4 rounded-lg shadow-sm">
+          <div class="flex items-center justify-between mb-2">
+            <label class="block text-sm font-medium text-gray-600">Dates</label>
+            <Button
+              v-if="!isEditingDates"
+              icon="pi pi-pencil"
+              text
+              rounded
+              severity="secondary"
+              size="small"
+              aria-label="Edit dates"
+              @click="toggleDateEditing"
+            />
+          </div>
+          <div v-if="!isEditingDates" class="flex flex-col gap-2 text-sm text-gray-700">
+            <div class="flex items-center gap-2">
+              <i class="pi pi-calendar text-gray-400"></i>
+              <span>Start Date: {{ props.startDate.toLocaleDateString() }}</span>
+            </div>
+            <div
+              class="flex items-center gap-2"
+              :class="{ 'text-red-500 font-semibold': isDueDateOverdue }"
+            >
+              <i class="pi pi-clock text-gray-400"></i>
+              <span>Due Date: {{ props.dueDate.toLocaleDateString() }}</span>
+            </div>
+          </div>
+          <div v-else class="flex flex-col gap-4 text-sm text-gray-700">
+            <div class="flex items-center gap-2">
+              <i class="pi pi-calendar text-gray-400"></i>
+              <span>Start Date:</span>
+              <input type="date" v-model="editingStartDate" class="w-full md:w-auto p-inputtext" />
+            </div>
+            <div class="flex items-center gap-2">
+              <i class="pi pi-clock text-gray-400"></i>
+              <span>Due Date:</span>
+              <input type="date" v-model="editingDueDate" class="w-full md:w-auto p-inputtext" />
+            </div>
+            <div class="flex justify-end gap-2 mt-4">
+              <Button
+                label="Cancel"
+                @click="toggleDateEditing"
+                severity="secondary"
+                outlined
+                size="small"
+              />
+              <Button
+                label="Save"
+                @click="
+                  () => {
+                    saveDates()
+                    toggleDateEditing()
+                  }
+                "
+                size="small"
+              />
+            </div>
+          </div>
+        </div>
+
         <!-- Phần chọn Status (giữ nguyên Dropdown) -->
         <div class="status-section">
           <label for="taskStatusDropdown" class="block text-sm font-medium text-gray-600 mb-2"
@@ -282,7 +405,7 @@ const cancelDescription = () => {
   border-radius: 8px;
   background-color: #ffffff;
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
-  max-height: 20vh;
+  max-height: 25vh;
 }
 .task-card:hover {
   transform: translateY(-2px);
@@ -325,9 +448,9 @@ const cancelDescription = () => {
 
 /* --- Status Indicator on Card --- */
 .status-indicator {
-  padding: 3px 10px;
-  border-radius: 12px;
-  font-size: 0.75rem;
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-size: 0.7rem;
   font-weight: 500;
   display: inline-block;
 }
@@ -352,12 +475,7 @@ const cancelDescription = () => {
   color: #111827;
   max-width: calc(100% - 3rem); /* Giới hạn chiều rộng title */
 }
-.dialog-body {
-  /* styles giữ nguyên */
-}
-.status-section {
-  /* styles giữ nguyên */
-}
+
 .content-section {
   line-height: 1.7;
   color: #374151;
@@ -365,9 +483,7 @@ const cancelDescription = () => {
 .content-section label {
   color: #4b5563;
 }
-.content-section .p-button[size='small'] {
-  /* PrimeVue small button style */
-}
+
 .content-section .p-inputtextarea {
   line-height: 1.7;
 } /* Đồng bộ line-height */
@@ -405,12 +521,32 @@ const cancelDescription = () => {
   background-color: #34d399;
 }
 
-/* --- Dropdown Styles (giữ nguyên) --- */
-.status-dropdown-component {
-  /* styles */
-}
 .status-dropdown-component :deep(.p-dropdown-label .flex),
 :global(.p-dropdown-panel .p-dropdown-item .flex) {
   align-items: center;
+}
+
+/* Style for overdue dueDate */
+.text-red-500 {
+  color: #ef4444;
+}
+.font-semibold {
+  font-weight: 600;
+}
+
+/* Styling for task dates */
+.task-dates {
+  border-top: 1px solid #e5e7eb;
+  padding-top: 0.25rem;
+}
+
+.date-section {
+  border: 1px solid #e5e7eb;
+  background-color: #f9fafb;
+}
+
+.pi-calendar,
+.pi-clock {
+  font-size: 1rem;
 }
 </style>
