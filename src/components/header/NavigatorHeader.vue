@@ -10,7 +10,7 @@ const isLoggedIn = computed(() => userStore.isLoggedIn)
 const items = computed(() => {
   const menuItems = [
     { label: 'Home', command: () => router.push('/') },
-    { label: 'About', command: () => router.push('/about') },
+    { label: 'Dashboard', command: () => router.push('/dashboard') },
     { label: 'Profile', command: () => router.push('/profile') },
     { label: 'Task', command: () => router.push('/task') },
   ]
