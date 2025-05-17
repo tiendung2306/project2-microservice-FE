@@ -1,11 +1,12 @@
 <script setup lang="ts">
-import router from '@/router'
 import { login } from '@/services/auth/authService'
 import { Password } from 'primevue'
 import Button from 'primevue/button'
 import InputText from 'primevue/inputtext'
 import { ref } from 'vue'
+import { useRouter } from 'vue-router'
 
+const router = useRouter()
 const email = ref('')
 const password = ref('')
 
@@ -19,6 +20,9 @@ const onLogin = async () => {
     .then((response) => {
       console.log('Login status:', response)
       router.push('/dashboard')
+        .then(() => {
+          window.location.reload()
+        })
     })
     .catch((error) => {
       console.error('Error during login:', error)
@@ -53,7 +57,7 @@ const onLogin = async () => {
     </form>
     <div class="font-italic">
       Not having account?<span class="ml-1 text-indigo-600 cursor-pointer hover:underline"
-        @click="$router.push('/register')">Register</span>
+        @click="router.push('/register')">Register</span>
     </div>
   </div>
 </template>

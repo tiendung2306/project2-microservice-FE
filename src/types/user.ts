@@ -1,8 +1,5 @@
 export type User = {
-  id: number
+  user_id: number
   username: string
   email: string
-  password: string
-  createdAt: string
-  updatedAt: string
 }
