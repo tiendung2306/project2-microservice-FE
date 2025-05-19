@@ -1,7 +1,7 @@
 import userServiceAxiosInstance, { authServiceAxiosInstance } from '@/services'
 import type { User } from '@/types/user'
 
-export const updateUser = async (id: Number, updateUser: Partial<Omit<User, 'user_id'>>) => {
+export const updateUser = async (id: number, updateUser: Partial<Omit<User, 'user_id'>>) => {
     const response = await userServiceAxiosInstance.patch(`/api/user/${id}`, updateUser)
     return response.data
 }
