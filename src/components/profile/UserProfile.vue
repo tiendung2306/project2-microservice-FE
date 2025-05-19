@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { changePassword, updateUser } from '@/services/profile/profile.service'
 import { useUserStore } from '@/stores/userStore'
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
@@ -18,7 +19,7 @@ const editableUser = ref({
 })
 console.log('User:', user)
 
-function toggleEdit(field: string) {
+async function toggleEdit(field: string) {
   if (isEditing.value === field) {
     // Save changes
     const updatedUser = userStore.getUser
@@ -28,13 +29,16 @@ function toggleEdit(field: string) {
     }
     if (field === 'username') {
       updatedUser.username = editableUser.value.username
+      await updateUser(updatedUser.user_id, { username: updatedUser.username })
     } else if (field === 'email') {
       updatedUser.email = editableUser.value.email
+      await updateUser(updatedUser.user_id, { email: updatedUser.email })
     } else if (field === 'password') {
       if (editableUser.value.password !== editableUser.value.confirmPassword) {
         alert('Passwords do not match')
         return
       }
+      await changePassword(editableUser.value.password)
     }
   }
   isEditing.value = isEditing.value === field ? null : field
@@ -49,18 +53,12 @@ function toggleEdit(field: string) {
         <div class="flex items-center space-x-2">
           <span class="font-medium text-gray-700">Username:</span>
           <span v-if="isEditing !== 'username'" class="text-gray-900">{{ user?.username }}</span>
-          <input
-            v-else
-            v-model="editableUser.username"
-            type="text"
-            class="border border-gray-300 rounded-md px-2 py-1 text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
-          />
+          <input v-else v-model="editableUser.username" type="text"
+            class="border border-gray-300 rounded-md px-2 py-1 text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500" />
         </div>
         <div class="flex flex-col items-end">
-          <button
-            @click="toggleEdit('username')"
-            class="text-sm text-white bg-blue-500 hover:bg-blue-600 px-3 py-1 rounded-md"
-          >
+          <button @click="toggleEdit('username')"
+            class="text-sm text-white bg-blue-500 hover:bg-blue-600 px-3 py-1 rounded-md">
             {{ isEditing === 'username' ? 'Save' : 'Edit' }}
           </button>
         </div>
@@ -70,18 +68,12 @@ function toggleEdit(field: string) {
         <div class="flex items-center space-x-2">
           <span class="font-medium text-gray-700">Email:</span>
           <span v-if="isEditing !== 'email'" class="text-gray-900">{{ user?.email }}</span>
-          <input
-            v-else
-            v-model="editableUser.email"
-            type="email"
-            class="border border-gray-300 rounded-md px-2 py-1 text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
-          />
+          <input v-else v-model="editableUser.email" type="email"
+            class="border border-gray-300 rounded-md px-2 py-1 text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500" />
         </div>
         <div class="flex flex-col items-end">
-          <button
-            @click="toggleEdit('email')"
-            class="text-sm text-white bg-blue-500 hover:bg-blue-600 px-3 py-1 rounded-md"
-          >
+          <button @click="toggleEdit('email')"
+            class="text-sm text-white bg-blue-500 hover:bg-blue-600 px-3 py-1 rounded-md">
             {{ isEditing === 'email' ? 'Save' : 'Edit' }}
           </button>
         </div>
@@ -92,26 +84,16 @@ function toggleEdit(field: string) {
           <span class="font-medium text-gray-700">Password:</span>
           <span v-if="isEditing !== 'password'" class="text-gray-900">**********</span>
           <div v-else class="space-y-2">
-            <input
-              v-model="editableUser.password"
-              type="password"
-              placeholder="New Password"
-              class="border border-gray-300 rounded-md px-2 py-1 text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-            <input
-              v-model="editableUser.confirmPassword"
-              type="password"
-              placeholder="Confirm Password"
-              class="border border-gray-300 rounded-md px-2 py-1 text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
+            <input v-model="editableUser.password" type="password" placeholder="New Password"
+              class="border border-gray-300 rounded-md px-2 py-1 text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+            <input v-model="editableUser.confirmPassword" type="password" placeholder="Confirm Password"
+              class="border border-gray-300 rounded-md px-2 py-1 text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500" />
             <p class="text-sm text-gray-500">Leave blank to keep the same password</p>
           </div>
         </div>
         <div class="flex flex-col items-end">
-          <button
-            @click="toggleEdit('password')"
-            class="text-sm text-white bg-blue-500 hover:bg-blue-600 px-3 py-1 rounded-md"
-          >
+          <button @click="toggleEdit('password')"
+            class="text-sm text-white bg-blue-500 hover:bg-blue-600 px-3 py-1 rounded-md">
             {{ isEditing === 'password' ? 'Save' : 'Edit' }}
           </button>
         </div>
