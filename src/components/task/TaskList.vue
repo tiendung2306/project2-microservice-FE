@@ -1,11 +1,13 @@
 <script setup lang="ts">
-import { ref, type Ref, computed } from 'vue'
-import Splitter from 'primevue/splitter'
-import SplitterPanel from 'primevue/splitterpanel'
-import TaskItem from '@/components/task/TaskItem.vue' // Đảm bảo đường dẫn đúng
-import type { Task } from '@/types/task'
-import { useUserStore } from '@/stores/userStore'
-import { useRouter } from 'vue-router'
+import TaskItem from '@/components/task/TaskItem.vue'; // Đảm bảo đường dẫn đúng
+import { createTask, deleteTask, getAllTasksByUserId, updateTask } from '@/services/task/task.service';
+import { useUserStore } from '@/stores/userStore';
+import type { CreateTask, Task, UpdateTask } from '@/types/task';
+import Splitter from 'primevue/splitter';
+import SplitterPanel from 'primevue/splitterpanel';
+import { computed, onMounted, ref, type Ref } from 'vue';
+import { useRouter } from 'vue-router';
+
 
 const userStore = useUserStore()
 const user = userStore.getUser
@@ -14,72 +16,53 @@ if (user === null) {
   router.push('/login')
 }
 
-const todoTasks = ref<Task[]>([
-  {
-    id: 1,
-    title: 'API Auth',
-    content:
-      '- API đăng nhập đăng ký, quên mật khẩu\n- Dùng jwt\n- Có refresh token\n- Có xác thực email\n- Có xác thực số điện thoại\nasd\ngewywywy\nwey4uyehe\nerheherhrh\nhwrheut\n\nddd',
-    status: 'To Do',
-    startDate: new Date('2023-10-01'),
-    dueDate: new Date('2023-10-05'),
-  },
-  {
-    id: 2,
-    title: 'Setup Project',
-    content: '- Cài đặt Vue + Vite\n- Thêm PrimeVue\n- Cấu hình ESLint, Prettier',
-    status: 'To Do',
-    startDate: new Date('2023-10-02'),
-    dueDate: new Date('2023-10-06'),
-  },
-  {
-    id: 3,
-    title: 'API Auth',
-    content:
-      '- API đăng nhập đăng ký, quên mật khẩu\n- Dùng jwt\n- Có refresh token\n- Có xác thực email\n- Có xác thực số điện thoại\nasd\ngewywywy\nwey4uyehe\nerheherhrh\nhwrheut\n\nddd',
-    status: 'To Do',
-    startDate: new Date('2023-10-03'),
-    dueDate: new Date('2023-10-07'),
-  },
-  {
-    id: 4,
-    title: 'Setup Project',
-    content: '- Cài đặt Vue + Vite\n- Thêm PrimeVue\n- Cấu hình ESLint, Prettier',
-    status: 'To Do',
-    startDate: new Date('2023-10-04'),
-    dueDate: new Date('2023-10-08'),
-  },
-  {
-    id: 5,
-    title: 'API Auth',
-    content:
-      '- API đăng nhập đăng ký, quên mật khẩu\n- Dùng jwt\n- Có refresh token\n- Có xác thực email\n- Có xác thực số điện thoại\nasd\ngewywywy\nwey4uyehe\nerheherhrh\nhwrheut\n\nddd',
-    status: 'To Do',
-    startDate: new Date('2023-10-05'),
-    dueDate: new Date('2023-10-09'),
-  },
-  {
-    id: 6,
-    title: 'Setup Project',
-    content: '- Cài đặt Vue + Vite\n- Thêm PrimeVue\n- Cấu hình ESLint, Prettier',
-    status: 'To Do',
-    startDate: new Date('2023-10-06'),
-    dueDate: new Date('2023-10-10'),
-  },
-])
-
-const inProgressTasks = ref<Task[]>([
-  {
-    id: 7,
-    title: 'Thiết kế UI Kanban',
-    content: '- Sử dụng Splitter\n- Thiết kế TaskItem Card\n- Thiết kế Dialog chi tiết',
-    status: 'In Progress',
-    startDate: new Date('2023-10-07'),
-    dueDate: new Date('2023-10-11'),
-  },
-])
-
+const todoTasks = ref<Task[]>([])
+const inProgressTasks = ref<Task[]>([])
 const doneTasks = ref<Task[]>([])
+
+const fetchTasks = async () => {
+  if (user === null) {
+    return;
+  }
+  try {
+    const todoData = await getAllTasksByUserId(user.user_id, 'To Do')
+    const inProgressData = await getAllTasksByUserId(user.user_id, 'In Progress')
+    const doneData = await getAllTasksByUserId(user.user_id, 'Done')
+
+    // Parse dates for each task
+    todoTasks.value = todoData.map(task => ({
+      ...task,
+      start_date: new Date(task.start_date),
+      due_date: new Date(task.due_date)
+    }))
+
+    inProgressTasks.value = inProgressData.map(task => ({
+      ...task,
+      start_date: new Date(task.start_date),
+      due_date: new Date(task.due_date)
+    }))
+
+    doneTasks.value = doneData.map(task => ({
+      ...task,
+      start_date: new Date(task.start_date),
+      due_date: new Date(task.due_date)
+    }))
+
+    console.log('Fetched tasks:', {
+      todo: todoTasks.value,
+      inProgress: inProgressTasks.value,
+      done: doneTasks.value
+    })
+  } catch (error) {
+    console.error('Error fetching tasks:', error)
+  }
+}
+
+onMounted(async () => {
+  await fetchTasks()
+})
+
+console.log(todoTasks.value)
 
 const sortedTodoTasks = computed(() => [...todoTasks.value].sort((a, b) => b.id - a.id))
 const sortedInProgressTasks = computed(() => [...inProgressTasks.value].sort((a, b) => b.id - a.id))
@@ -102,30 +85,43 @@ const findTaskAndList = (
   return { task: undefined, list: undefined }
 }
 
-const handleUpdateTitle = (taskId: number, newTitle: string) => {
+const handleUpdateTitle = async (taskId: number, newTitle: string) => {
   const { task } = findTaskAndList(taskId)
   if (task) {
     task.title = newTitle
     console.log(`Updated title for task ${taskId}`)
+    const updateTaskRequest: UpdateTask = {
+      title: newTitle,
+      content: task.content,
+      status: task.status,
+      start_date: task.start_date.toISOString(),
+      due_date: task.due_date.toISOString()
+    }
+    await updateTask(taskId, updateTaskRequest)
   }
 }
 
-const handleUpdateContent = (taskId: number, newContent: string) => {
+const handleUpdateContent = async (taskId: number, newContent: string) => {
   const { task } = findTaskAndList(taskId)
   if (task) {
     task.content = newContent
     console.log(`Updated content for task ${taskId}`)
+    const updateTaskRequest: UpdateTask = {
+      title: task.title,
+      content: newContent,
+      status: task.status,
+      start_date: task.start_date.toISOString(),
+      due_date: task.due_date.toISOString()
+    }
+    await updateTask(taskId, updateTaskRequest)
   }
 }
 
-const handleUpdateStatus = (taskId: number, newStatus: 'To Do' | 'In Progress' | 'Done') => {
+const handleUpdateStatus = async (taskId: number, newStatus: 'To Do' | 'In Progress' | 'Done') => {
   const { task, list: currentList } = findTaskAndList(taskId)
 
   if (!task || !currentList || task.status === newStatus) {
-    // Task không tồn tại, không tìm thấy list hoặc status không đổi
     if (task && task.status === newStatus) {
-      // Nếu status không đổi nhưng vẫn emit (ví dụ chọn lại status cũ trong dropdown)
-      // Có thể cần cập nhật lại status của task nếu logic component con bị sai
       task.status = newStatus
     }
     return
@@ -147,10 +143,20 @@ const handleUpdateStatus = (taskId: number, newStatus: 'To Do' | 'In Progress' |
     doneTasks.value.push(task)
   }
   console.log(`Moved task ${taskId} to ${newStatus}`)
+
+  // 4. Update backend
+  const updateTaskRequest: UpdateTask = {
+    title: task.title,
+    content: task.content,
+    status: newStatus,
+    start_date: task.start_date.toISOString(),
+    due_date: task.due_date.toISOString()
+  }
+  await updateTask(taskId, updateTaskRequest)
 }
 
 // 6. Cập nhật hàm onAddTask
-function onAddTask(statusIndex: 0 | 1 | 2) {
+async function onAddTask(statusIndex: 0 | 1 | 2) {
   let status: 'To Do' | 'In Progress' | 'Done'
   let targetList: Ref<Task[]>
 
@@ -165,32 +171,72 @@ function onAddTask(statusIndex: 0 | 1 | 2) {
     targetList = doneTasks
   }
 
-  const newTask: Task = {
-    id: Math.floor(Math.random() * 1000),
+  const createTaskRequest: CreateTask = {
+    user_id: user!.user_id,
     title: `New Task (${status})`,
-    content: '',
+    content: 'Click to edit',
     status: status,
-    startDate: new Date(),
-    dueDate: new Date(new Date().setDate(new Date().getDate() + 7)), // 7 ngày sau
+    start_date: new Date().toISOString(),
+    due_date: new Date(new Date().setDate(new Date().getDate() + 7)).toISOString(), // 7 ngày sau
   }
 
-  targetList.value.push(newTask)
+  const newTask = await createTask(createTaskRequest)
+
+  // Parse dates for the new task
+  const parsedTask = {
+    ...newTask,
+    start_date: new Date(newTask.start_date),
+    due_date: new Date(newTask.due_date)
+  }
+
+  targetList.value.push(parsedTask)
   console.log(`Added new task to ${status}`)
 }
 
-const handleUpdateStartDate = (taskId: number, newStartDate: Date) => {
+const handleUpdateStartDate = async (taskId: number, newStartDate: Date) => {
   const { task } = findTaskAndList(taskId)
   if (task) {
-    task.startDate = newStartDate
+    task.start_date = newStartDate
     console.log(`Updated startDate for task ${taskId}`)
+    const updateTaskRequest: UpdateTask = {
+      title: task.title,
+      content: task.content,
+      status: task.status,
+      start_date: newStartDate.toISOString(),
+      due_date: task.due_date.toISOString()
+    }
+    await updateTask(taskId, updateTaskRequest)
   }
 }
 
-const handleUpdateDueDate = (taskId: number, newDueDate: Date) => {
+const handleUpdateDueDate = async (taskId: number, newDueDate: Date) => {
   const { task } = findTaskAndList(taskId)
   if (task) {
-    task.dueDate = newDueDate
+    task.due_date = newDueDate
     console.log(`Updated dueDate for task ${taskId}`)
+    const updateTaskRequest: UpdateTask = {
+      title: task.title,
+      content: task.content,
+      status: task.status,
+      start_date: task.start_date.toISOString(),
+      due_date: newDueDate.toISOString()
+    }
+    await updateTask(taskId, updateTaskRequest)
+  }
+}
+
+const handleDeleteTask = async (taskId: number) => {
+  try {
+    await deleteTask(taskId)
+
+    // Remove task from the appropriate list
+    todoTasks.value = todoTasks.value.filter(t => t.id !== taskId)
+    inProgressTasks.value = inProgressTasks.value.filter(t => t.id !== taskId)
+    doneTasks.value = doneTasks.value.filter(t => t.id !== taskId)
+
+    console.log(`Deleted task ${taskId}`)
+  } catch (error) {
+    console.error('Error deleting task:', error)
   }
 }
 </script>
@@ -204,32 +250,21 @@ const handleUpdateDueDate = (taskId: number, newDueDate: Date) => {
         <!-- Header -->
         <div class="flex justify-between items-center px-4 py-3 border-b bg-gray-50 flex-shrink-0">
           <span class="font-semibold text-gray-700">TO DO</span>
-          <button
-            @click="() => onAddTask(0)"
+          <button @click="() => onAddTask(0)"
             class="p-button p-component p-button-icon-only p-button-rounded p-button-text p-button-sm text-green-600 hover:bg-green-50"
-            aria-label="Add To Do Task"
-            v-tooltip.bottom="'Add Task'"
-          >
+            aria-label="Add To Do Task" v-tooltip.bottom="'Add Task'">
             <i class="pi pi-plus"></i>
           </button>
         </div>
         <!-- Task List -->
         <div class="flex flex-col gap-3 p-3 overflow-y-auto flex-grow">
           <!-- 3. Sử dụng v-for -->
-          <TaskItem
-            v-for="task in sortedTodoTasks"
-            :key="task.id"
-            :title="task.title"
-            :content="task.content"
-            :status="task.status"
-            :startDate="task.startDate"
-            :dueDate="task.dueDate"
-            @update:title="handleUpdateTitle(task.id, $event)"
-            @update:content="handleUpdateContent(task.id, $event)"
+          <TaskItem v-for="task in sortedTodoTasks" :key="task.id" :title="task.title" :content="task.content"
+            :status="task.status" :startDate="task.start_date" :dueDate="task.due_date"
+            @update:title="handleUpdateTitle(task.id, $event)" @update:content="handleUpdateContent(task.id, $event)"
             @update:status="handleUpdateStatus(task.id, $event)"
             @update:startDate="handleUpdateStartDate(task.id, $event)"
-            @update:dueDate="handleUpdateDueDate(task.id, $event)"
-          />
+            @update:dueDate="handleUpdateDueDate(task.id, $event)" @delete="handleDeleteTask(task.id)" />
           <div v-if="todoTasks.length === 0" class="text-center text-gray-400 text-sm mt-4">
             No tasks
           </div>
@@ -241,31 +276,20 @@ const handleUpdateDueDate = (taskId: number, newDueDate: Date) => {
         <!-- Header -->
         <div class="flex justify-between items-center px-4 py-3 border-b bg-gray-50 flex-shrink-0">
           <span class="font-semibold text-gray-700">IN PROGRESS</span>
-          <button
-            @click="() => onAddTask(1)"
+          <button @click="() => onAddTask(1)"
             class="p-button p-component p-button-icon-only p-button-rounded p-button-text p-button-sm text-green-600 hover:bg-green-50"
-            aria-label="Add In Progress Task"
-            v-tooltip.bottom="'Add Task'"
-          >
+            aria-label="Add In Progress Task" v-tooltip.bottom="'Add Task'">
             <i class="pi pi-plus"></i>
           </button>
         </div>
         <!-- Task List -->
         <div class="flex flex-col gap-3 p-3 overflow-y-auto flex-grow">
-          <TaskItem
-            v-for="task in sortedInProgressTasks"
-            :key="task.id"
-            :title="task.title"
-            :content="task.content"
-            :status="task.status"
-            :startDate="task.startDate"
-            :dueDate="task.dueDate"
-            @update:title="handleUpdateTitle(task.id, $event)"
-            @update:content="handleUpdateContent(task.id, $event)"
+          <TaskItem v-for="task in sortedInProgressTasks" :key="task.id" :title="task.title" :content="task.content"
+            :status="task.status" :startDate="task.start_date" :dueDate="task.due_date"
+            @update:title="handleUpdateTitle(task.id, $event)" @update:content="handleUpdateContent(task.id, $event)"
             @update:status="handleUpdateStatus(task.id, $event)"
             @update:startDate="handleUpdateStartDate(task.id, $event)"
-            @update:dueDate="handleUpdateDueDate(task.id, $event)"
-          />
+            @update:dueDate="handleUpdateDueDate(task.id, $event)" @delete="handleDeleteTask(task.id)" />
           <div v-if="inProgressTasks.length === 0" class="text-center text-gray-400 text-sm mt-4">
             No tasks
           </div>
@@ -277,31 +301,20 @@ const handleUpdateDueDate = (taskId: number, newDueDate: Date) => {
         <!-- Header -->
         <div class="flex justify-between items-center px-4 py-3 border-b bg-gray-50 flex-shrink-0">
           <span class="font-semibold text-gray-700">DONE</span>
-          <button
-            @click="() => onAddTask(2)"
+          <button @click="() => onAddTask(2)"
             class="p-button p-component p-button-icon-only p-button-rounded p-button-text p-button-sm text-green-600 hover:bg-green-50"
-            aria-label="Add Done Task"
-            v-tooltip.bottom="'Add Task'"
-          >
+            aria-label="Add Done Task" v-tooltip.bottom="'Add Task'">
             <i class="pi pi-plus"></i>
           </button>
         </div>
         <!-- Task List -->
         <div class="flex flex-col gap-3 p-3 overflow-y-auto flex-grow">
-          <TaskItem
-            v-for="task in sortedDoneTasks"
-            :key="task.id"
-            :title="task.title"
-            :content="task.content"
-            :status="task.status"
-            :startDate="task.startDate"
-            :dueDate="task.dueDate"
-            @update:title="handleUpdateTitle(task.id, $event)"
-            @update:content="handleUpdateContent(task.id, $event)"
+          <TaskItem v-for="task in sortedDoneTasks" :key="task.id" :title="task.title" :content="task.content"
+            :status="task.status" :startDate="task.start_date" :dueDate="task.due_date"
+            @update:title="handleUpdateTitle(task.id, $event)" @update:content="handleUpdateContent(task.id, $event)"
             @update:status="handleUpdateStatus(task.id, $event)"
             @update:startDate="handleUpdateStartDate(task.id, $event)"
-            @update:dueDate="handleUpdateDueDate(task.id, $event)"
-          />
+            @update:dueDate="handleUpdateDueDate(task.id, $event)" @delete="handleDeleteTask(task.id)" />
           <div v-if="doneTasks.length === 0" class="text-center text-gray-400 text-sm mt-4">
             No tasks
           </div>
@@ -314,12 +327,14 @@ const handleUpdateDueDate = (taskId: number, newDueDate: Date) => {
 <style scoped>
 /* Thêm style nếu cần, ví dụ đảm bảo chiều cao và scroll */
 .card {
-  padding: 1rem; /* Hoặc padding khác tùy layout tổng thể */
+  padding: 1rem;
+  /* Hoặc padding khác tùy layout tổng thể */
 }
 
 /* Style cho nút add task */
 .p-button-sm i {
-  font-size: 1rem; /* Điều chỉnh kích thước icon nếu cần */
+  font-size: 1rem;
+  /* Điều chỉnh kích thước icon nếu cần */
 }
 
 /* Style cho tooltip (nếu bạn dùng directive v-tooltip của PrimeVue) */

@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { ref, defineProps, computed, watch } from 'vue'
+import { computed, defineProps, ref, watch } from 'vue'
 // 1. Thêm InputText, Textarea, Button
-import { Card, Dialog, Dropdown, InputText, Textarea, Button } from 'primevue'
+import { Button, Card, Dialog, Dropdown, InputText, Textarea, useConfirm } from 'primevue'
 
 // Props (giữ nguyên)
 const props = defineProps({
@@ -23,10 +23,12 @@ const emit = defineEmits([
   'update:content',
   'update:startDate',
   'update:dueDate',
+  'delete',
 ])
 
 // --- State ---
 const dialogVisible = ref(false)
+const confirm = useConfirm()
 // Status state
 const selectedStatus = ref(props.status)
 const statusOptions = ref([
@@ -142,6 +144,26 @@ const saveDescription = () => {
 const cancelDescription = () => {
   isEditingDescription.value = false
 }
+
+// Add delete confirmation method
+const confirmDelete = () => {
+  confirm.require({
+    message: 'Are you sure you want to delete this task?',
+    header: 'Delete Confirmation',
+    icon: 'pi pi-exclamation-triangle',
+    acceptClass: 'p-button-success',
+    rejectClass: 'p-button-danger',
+    acceptLabel: 'Yes',
+    rejectLabel: 'No',
+    accept: () => {
+      emit('delete')
+      dialogVisible.value = false
+    },
+    reject: () => {
+      // Do nothing
+    }
+  })
+}
 </script>
 
 <template>
@@ -163,92 +185,49 @@ const cancelDescription = () => {
           <i class="pi pi-calendar text-gray-400 text-sm"></i>
           <span>Start: {{ props.startDate.toLocaleDateString() }}</span>
         </div>
-        <div
-          class="flex items-center gap-1"
-          :class="{ 'text-red-500 font-semibold': isDueDateOverdue }"
-        >
+        <div class="flex items-center gap-1" :class="{ 'text-red-500 font-semibold': isDueDateOverdue }">
           <i class="pi pi-clock text-gray-400 text-sm"></i>
           <span>Due: {{ props.dueDate.toLocaleDateString() }}</span>
         </div>
       </div>
-      <div
-        class="status-indicator mt-1 text-xs"
-        :class="`status-${props.status.toLowerCase().replace(' ', '-')}`"
-      >
+      <div class="status-indicator mt-1 text-xs" :class="`status-${props.status.toLowerCase().replace(' ', '-')}`">
         {{ currentStatusLabel }}
       </div>
     </template>
   </Card>
 
   <!-- Dialog chi tiết Task -->
-  <Dialog
-    v-model:visible="dialogVisible"
-    modal
-    :closable="false"
-    :dismissableMask="true"
-    :showHeader="false"
-    class="task-dialog"
-    :style="{ width: '650px', maxWidth: '90vw' }"
-    :contentStyle="{ padding: '0', maxHeight: '80vh' }"
-  >
+  <Dialog v-model:visible="dialogVisible" modal :closable="false" :dismissableMask="true" :showHeader="false"
+    class="task-dialog" :style="{ width: '650px', maxWidth: '90vw' }"
+    :contentStyle="{ padding: '0', maxHeight: '80vh' }">
     <div class="dialog-content flex flex-col h-full">
       <!-- Header tùy chỉnh -->
       <div
-        class="custom-header flex justify-between items-center px-6 py-4 border-b border-gray-200 flex-shrink-0 gap-4"
-      >
+        class="custom-header flex justify-between items-center px-6 py-4 border-b border-gray-200 flex-shrink-0 gap-4">
         <!-- 2. Title Editing -->
         <div v-if="!isEditingTitle" class="flex items-center gap-2 flex-grow min-w-0">
           <h2 class="text-xl font-semibold text-gray-800 truncate" :title="props.title">
             {{ props.title }}
           </h2>
-          <Button
-            icon="pi pi-pencil"
-            @click="startEditingTitle"
-            text
-            rounded
-            severity="secondary"
-            aria-label="Edit title"
-            class="flex-shrink-0"
-          />
+          <Button icon="pi pi-pencil" @click="startEditingTitle" text rounded severity="secondary"
+            aria-label="Edit title" class="flex-shrink-0" />
         </div>
         <div v-else class="flex items-center gap-2 flex-grow min-w-0">
-          <InputText
-            v-model="editingTitle"
-            class="flex-grow text-xl font-semibold p-inputtext-lg"
-            aria-label="Edit title input"
-            @keyup.enter="saveTitle"
-            @keyup.esc="cancelTitle"
-          />
-          <Button
-            icon="pi pi-check"
-            @click="saveTitle"
-            rounded
-            text
-            severity="success"
-            aria-label="Save title"
-            class="flex-shrink-0"
-          />
-          <Button
-            icon="pi pi-times"
-            @click="cancelTitle"
-            rounded
-            text
-            severity="danger"
-            aria-label="Cancel title edit"
-            class="flex-shrink-0"
-          />
+          <InputText v-model="editingTitle" class="flex-grow text-xl font-semibold p-inputtext-lg"
+            aria-label="Edit title input" @keyup.enter="saveTitle" @keyup.esc="cancelTitle" />
+          <Button icon="pi pi-check" @click="saveTitle" rounded text severity="success" aria-label="Save title"
+            class="flex-shrink-0" />
+          <Button icon="pi pi-times" @click="cancelTitle" rounded text severity="danger" aria-label="Cancel title edit"
+            class="flex-shrink-0" />
         </div>
 
-        <!-- Nút đóng Dialog -->
-        <Button
-          icon="pi pi-times"
-          @click="dialogVisible = false"
-          text
-          rounded
-          severity="secondary"
-          aria-label="Close dialog"
-          class="flex-shrink-0"
-        />
+        <!-- Action Buttons -->
+        <div class="flex items-center gap-2">
+          <Button icon="pi pi-trash" @click="confirmDelete" text rounded severity="danger" aria-label="Delete task"
+            class="flex-shrink-0" v-tooltip.bottom="'Delete Task'" />
+          <Button icon="pi pi-times" @click="dialogVisible = false" text rounded severity="secondary"
+            aria-label="Close dialog" class="flex-shrink-0" />
+        </div>
       </div>
 
       <!-- Body của Dialog -->
@@ -257,26 +236,15 @@ const cancelDescription = () => {
         <div class="date-section bg-gray-50 p-4 rounded-lg shadow-sm">
           <div class="flex items-center justify-between mb-2">
             <label class="block text-sm font-medium text-gray-600">Dates</label>
-            <Button
-              v-if="!isEditingDates"
-              icon="pi pi-pencil"
-              text
-              rounded
-              severity="secondary"
-              size="small"
-              aria-label="Edit dates"
-              @click="toggleDateEditing"
-            />
+            <Button v-if="!isEditingDates" icon="pi pi-pencil" text rounded severity="secondary" size="small"
+              aria-label="Edit dates" @click="toggleDateEditing" />
           </div>
           <div v-if="!isEditingDates" class="flex flex-col gap-2 text-sm text-gray-700">
             <div class="flex items-center gap-2">
               <i class="pi pi-calendar text-gray-400"></i>
               <span>Start Date: {{ props.startDate.toLocaleDateString() }}</span>
             </div>
-            <div
-              class="flex items-center gap-2"
-              :class="{ 'text-red-500 font-semibold': isDueDateOverdue }"
-            >
+            <div class="flex items-center gap-2" :class="{ 'text-red-500 font-semibold': isDueDateOverdue }">
               <i class="pi pi-clock text-gray-400"></i>
               <span>Due Date: {{ props.dueDate.toLocaleDateString() }}</span>
             </div>
@@ -293,55 +261,32 @@ const cancelDescription = () => {
               <input type="date" v-model="editingDueDate" class="w-full md:w-auto p-inputtext" />
             </div>
             <div class="flex justify-end gap-2 mt-4">
-              <Button
-                label="Cancel"
-                @click="toggleDateEditing"
-                severity="secondary"
-                outlined
-                size="small"
-              />
-              <Button
-                label="Save"
-                @click="
-                  () => {
-                    saveDates()
-                    toggleDateEditing()
-                  }
-                "
-                size="small"
-              />
+              <Button label="Cancel" @click="toggleDateEditing" severity="secondary" outlined size="small" />
+              <Button label="Save" @click="
+                () => {
+                  saveDates()
+                  toggleDateEditing()
+                }
+              " size="small" />
             </div>
           </div>
         </div>
 
         <!-- Phần chọn Status (giữ nguyên Dropdown) -->
         <div class="status-section">
-          <label for="taskStatusDropdown" class="block text-sm font-medium text-gray-600 mb-2"
-            >Status</label
-          >
-          <Dropdown
-            id="taskStatusDropdown"
-            v-model="selectedStatus"
-            :options="statusOptions"
-            optionLabel="label"
-            optionValue="value"
-            placeholder="Select Status"
-            class="w-full md:w-60 status-dropdown-component"
-          >
+          <label for="taskStatusDropdown" class="block text-sm font-medium text-gray-600 mb-2">Status</label>
+          <Dropdown id="taskStatusDropdown" v-model="selectedStatus" :options="statusOptions" optionLabel="label"
+            optionValue="value" placeholder="Select Status" class="w-full md:w-60 status-dropdown-component">
             <template #value="slotProps">
               <div v-if="slotProps.value" class="flex items-center">
-                <span
-                  :class="`status-dot status-${slotProps.value.toLowerCase().replace(' ', '-')}`"
-                ></span>
+                <span :class="`status-dot status-${slotProps.value.toLowerCase().replace(' ', '-')}`"></span>
                 <div>{{ slotProps.value }}</div>
               </div>
               <span v-else>{{ slotProps.placeholder }}</span>
             </template>
             <template #option="slotProps">
               <div class="flex items-center">
-                <span
-                  :class="`status-dot status-${slotProps.option.value.toLowerCase().replace(' ', '-')}`"
-                ></span>
+                <span :class="`status-dot status-${slotProps.option.value.toLowerCase().replace(' ', '-')}`"></span>
                 <div>{{ slotProps.option.label }}</div>
               </div>
             </template>
@@ -353,16 +298,8 @@ const cancelDescription = () => {
           <div class="flex items-center justify-between mb-2">
             <label class="block text-sm font-medium text-gray-600">Description</label>
             <!-- Nút Edit chỉ hiện khi không ở chế độ chỉnh sửa -->
-            <Button
-              v-if="!isEditingDescription"
-              icon="pi pi-pencil"
-              @click="startEditingDescription"
-              text
-              rounded
-              severity="secondary"
-              size="small"
-              aria-label="Edit description"
-            />
+            <Button v-if="!isEditingDescription" icon="pi pi-pencil" @click="startEditingDescription" text rounded
+              severity="secondary" size="small" aria-label="Edit description" />
           </div>
 
           <!-- Hiển thị Description (dùng white-space) -->
@@ -373,21 +310,10 @@ const cancelDescription = () => {
           </div>
           <!-- Chế độ chỉnh sửa Description -->
           <div v-else class="flex flex-col gap-2">
-            <Textarea
-              v-model="editingDescription"
-              autoResize
-              rows="5"
-              class="w-full text-base p-inputtextarea"
-              aria-label="Edit description input"
-            />
+            <Textarea v-model="editingDescription" autoResize rows="5" class="w-full text-base p-inputtextarea"
+              aria-label="Edit description input" />
             <div class="flex justify-end gap-2">
-              <Button
-                label="Cancel"
-                @click="cancelDescription"
-                severity="secondary"
-                outlined
-                size="small"
-              />
+              <Button label="Cancel" @click="cancelDescription" severity="secondary" outlined size="small" />
               <Button label="Save" @click="saveDescription" size="small" />
             </div>
           </div>
@@ -407,17 +333,20 @@ const cancelDescription = () => {
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
   max-height: 25vh;
 }
+
 .task-card:hover {
   transform: translateY(-2px);
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.08);
   border-color: #d1d5db;
 }
+
 .task-card :deep(.p-card-title) {
   font-size: 1rem;
   font-weight: 600;
   margin-bottom: 0.5rem;
   padding: 0;
 }
+
 .task-card :deep(.p-card-content) {
   padding: 0 0 0.75rem 0;
   font-size: 0.875rem;
@@ -426,15 +355,18 @@ const cancelDescription = () => {
   overflow-x: hidden;
   overflow-y: hidden;
 }
+
 .task-card :deep(.p-card-body) {
   height: 100%;
   overflow-y: hidden;
   padding: 1rem;
 }
+
 .task-card :deep(.p-card-footer) {
   padding: 0.5rem 1rem;
   border-top: 1px solid #f3f4f6;
 }
+
 .task-card-title {
   font-size: 1.1rem;
   font-weight: 600;
@@ -443,7 +375,8 @@ const cancelDescription = () => {
 
 /* --- CSS cho xuống dòng --- */
 .whitespace-pre-line {
-  white-space: pre-line; /* hoặc pre-wrap nếu muốn giữ nhiều khoảng trắng */
+  white-space: pre-line;
+  /* hoặc pre-wrap nếu muốn giữ nhiều khoảng trắng */
 }
 
 /* --- Status Indicator on Card --- */
@@ -460,6 +393,7 @@ const cancelDescription = () => {
   border-radius: 8px;
   overflow: hidden;
 }
+
 .dialog-content {
   max-height: inherit;
 }
@@ -467,26 +401,33 @@ const cancelDescription = () => {
 .custom-header .p-button {
   width: 2.25rem;
   height: 2.25rem;
-} /* Kích thước nút icon */
+}
+
+/* Kích thước nút icon */
 .custom-header .p-inputtext {
   padding: 0.5rem 0.75rem;
 }
+
 .custom-header h2 {
   color: #111827;
-  max-width: calc(100% - 3rem); /* Giới hạn chiều rộng title */
+  max-width: calc(100% - 3rem);
+  /* Giới hạn chiều rộng title */
 }
 
 .content-section {
   line-height: 1.7;
   color: #374151;
 }
+
 .content-section label {
   color: #4b5563;
 }
 
 .content-section .p-inputtextarea {
   line-height: 1.7;
-} /* Đồng bộ line-height */
+}
+
+/* Đồng bộ line-height */
 
 /* --- Status Colors & Dot (giữ nguyên) --- */
 .status-to-do {
@@ -494,16 +435,19 @@ const cancelDescription = () => {
   color: #4b5563;
   border: 1px solid #e5e7eb;
 }
+
 .status-in-progress {
   background-color: #dbeafe;
   color: #1e40af;
   border: 1px solid #bfdbfe;
 }
+
 .status-done {
   background-color: #d1fae5;
   color: #065f46;
   border: 1px solid #a7f3d0;
 }
+
 .status-dot {
   width: 8px;
   height: 8px;
@@ -511,12 +455,15 @@ const cancelDescription = () => {
   margin-right: 8px;
   display: inline-block;
 }
+
 .status-dot.status-to-do {
   background-color: #9ca3af;
 }
+
 .status-dot.status-in-progress {
   background-color: #60a5fa;
 }
+
 .status-dot.status-done {
   background-color: #34d399;
 }
@@ -530,6 +477,7 @@ const cancelDescription = () => {
 .text-red-500 {
   color: #ef4444;
 }
+
 .font-semibold {
   font-weight: 600;
 }
@@ -548,5 +496,45 @@ const cancelDescription = () => {
 .pi-calendar,
 .pi-clock {
   font-size: 1rem;
+}
+
+/* Add styles for menu button */
+.task-menu-button {
+  opacity: 0;
+  transition: opacity 0.2s ease-in-out;
+  z-index: 10;
+  position: absolute;
+  top: 0.5rem;
+  right: 0.5rem;
+}
+
+.task-card:hover .task-menu-button {
+  opacity: 1;
+}
+
+/* Add styles for delete button */
+.p-button.p-button-danger.p-button-text:hover {
+  background-color: rgba(239, 68, 68, 0.1);
+}
+
+/* Add styles for confirm dialog buttons */
+:deep(.p-confirm-dialog .p-button.p-button-success) {
+  background-color: #22c55e;
+  border-color: #22c55e;
+}
+
+:deep(.p-confirm-dialog .p-button.p-button-success:hover) {
+  background-color: #16a34a;
+  border-color: #16a34a;
+}
+
+:deep(.p-confirm-dialog .p-button.p-button-danger) {
+  background-color: #ef4444;
+  border-color: #ef4444;
+}
+
+:deep(.p-confirm-dialog .p-button.p-button-danger:hover) {
+  background-color: #dc2626;
+  border-color: #dc2626;
 }
 </style>

@@ -3,11 +3,13 @@ import './assets/tailwind.css'
 
 import Aura from '@primevue/themes/aura'
 
+import { createPinia } from 'pinia'
+import PrimeVue from 'primevue/config'
+import ConfirmationService from 'primevue/confirmationservice'
+import ConfirmDialog from 'primevue/confirmdialog'
 import { createApp } from 'vue'
 import App from './App.vue'
 import router from './router'
-import PrimeVue from 'primevue/config'
-import { createPinia } from 'pinia'
 
 const app = createApp(App)
 
@@ -19,6 +21,9 @@ app.use(PrimeVue, {
     },
   },
 })
+
+app.use(ConfirmationService)
+app.component('ConfirmDialog', ConfirmDialog)
 
 const pinia = createPinia()
 app.use(pinia)
