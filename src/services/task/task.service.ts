@@ -1,5 +1,6 @@
 import { taskServiceAxiosInstance } from "@/services"
 import type { CreateTask, Task, UpdateTask } from "@/types/task"
+
 export const getAllTasksByUserId = async (id: number, status: string) => {
 	const response = await taskServiceAxiosInstance.get(`/api/task/user/${id}?status=${status}`)
 	return response.data as Task[]

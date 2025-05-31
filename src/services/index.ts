@@ -2,19 +2,21 @@ import { useUserStore } from '@/stores/userStore'
 import axios from 'axios'
 
 const BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost'
+const API_GATEWAY_PORT = import.meta.env.VITE_API_GATEWAY_PORT || '3005'
 
-// Enum cho các service
-export enum ServicePort {
-  USER = import.meta.env.VITE_API_USER_SERVICE_PORT || '3000',
-  AUTH = import.meta.env.VITE_API_AUTH_SERVICE_PORT || '3001',
-  TASK = import.meta.env.VITE_API_TASK_SERVICE_PORT || '3002',
-  NOTIFICATION = import.meta.env.VITE_API_NOTIFICATION_SERVICE_PORT || '3003'
+// Enum cho các service paths
+export enum ServicePath {
+  USER = '/user',
+  AUTH = '/auth',
+  TASK = '/task',
+  NOTIFICATION = '/notification',
+  DASHBOARD = '/dashboard'
 }
 
-// Factory function để tạo axios instance với port tương ứng
-export const createAxiosInstance = (port: ServicePort) => {
+// Factory function để tạo axios instance với path tương ứng
+export const createAxiosInstance = (path: ServicePath) => {
   const instance = axios.create({
-    baseURL: `${BASE_URL}:${port}`,
+    baseURL: `${BASE_URL}:${API_GATEWAY_PORT}${path}`,
     timeout: 10000,
     headers: {
       'Content-Type': 'application/json',
@@ -72,9 +74,9 @@ export const createAxiosInstance = (port: ServicePort) => {
   return instance
 }
 
-export const userServiceAxiosInstance = createAxiosInstance(ServicePort.USER)
-export const authServiceAxiosInstance = createAxiosInstance(ServicePort.AUTH)
-export const taskServiceAxiosInstance = createAxiosInstance(ServicePort.TASK)
-export const notificationServiceAxiosInstance = createAxiosInstance(ServicePort.NOTIFICATION)
-
+export const userServiceAxiosInstance = createAxiosInstance(ServicePath.USER)
+export const authServiceAxiosInstance = createAxiosInstance(ServicePath.AUTH)
+export const taskServiceAxiosInstance = createAxiosInstance(ServicePath.TASK)
+export const notificationServiceAxiosInstance = createAxiosInstance(ServicePath.NOTIFICATION)
+export const dashboardServiceAxiosInstance = createAxiosInstance(ServicePath.DASHBOARD)
 export default userServiceAxiosInstance
