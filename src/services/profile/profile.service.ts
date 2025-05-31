@@ -15,3 +15,12 @@ export const changePassword = async (password: string) => {
     const response = await authServiceAxiosInstance.post(`/api/auth/change-password`, { newPassword: password })
     return response.data
 }
+
+export const checkUserServiceHealth = async () => {
+    try {
+        await userServiceAxiosInstance.get('/api/health')
+        return true
+    } catch {
+        return false
+    }
+}

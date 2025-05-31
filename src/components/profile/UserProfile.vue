@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { changePassword, getUser, updateUser } from '@/services/profile/profile.service'
+import { changePassword, getUser, updateUser, checkUserServiceHealth } from '@/services/profile/profile.service'
 import { useUserStore } from '@/stores/userStore'
 import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
@@ -9,9 +9,21 @@ const router = useRouter()
 
 // Use computed to get reactive user data
 const user = computed(() => userStore.getUser)
+const loading = ref(false)
 
 onMounted(async () => {
+  loading.value = true
+  // Check health of user-service
+  const healthy = await checkUserServiceHealth()
+  if (!healthy) {
+    loading.value = false
+    alert('User-service không khả dụng')
+    router.push('/dashboard')
+    return
+  }
+
   if (!user.value) {
+    loading.value = false
     router.push('/login')
     return
   }
@@ -19,11 +31,13 @@ onMounted(async () => {
   try {
     // Fetch latest user data
     const latestUserData = await getUser(user.value.user_id.toString())
-    console.log(latestUserData)
-    // Update store with latest data
     userStore.setUser(latestUserData)
   } catch (error) {
-    console.error('Error fetching user data:', error)
+    // Nếu lỗi khi fetch user (ví dụ service down giữa chừng)
+    alert('User-service không khả dụng')
+    router.push('/dashboard')
+  } finally {
+    loading.value = false
   }
 })
 
@@ -76,7 +90,13 @@ async function toggleEdit(field: string) {
 
 <template>
   <div class="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 py-12 px-4 sm:px-6 lg:px-8">
-    <div class="max-w-2xl mx-auto">
+    <div v-if="loading" class="fixed inset-0 flex items-center justify-center bg-black bg-opacity-30 z-50">
+      <div class="flex flex-col items-center">
+        <span class="loader mb-2"></span>
+        <span class="text-gray-700 font-semibold">Đang tải dữ liệu...</span>
+      </div>
+    </div>
+    <div class="max-w-2xl mx-auto" v-else>
       <!-- Profile Header -->
       <div class="text-center mb-10">
         <div
@@ -191,5 +211,18 @@ button {
 
 button:active {
   transform: scale(0.97);
+}
+
+.loader {
+  border: 4px solid #e5e7eb;
+  border-top: 4px solid #6366f1;
+  border-radius: 50%;
+  width: 36px;
+  height: 36px;
+  animation: spin 1s linear infinite;
+}
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
 }
 </style>

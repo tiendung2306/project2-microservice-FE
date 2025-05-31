@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import TaskItem from '@/components/task/TaskItem.vue'; // Đảm bảo đường dẫn đúng
-import { createTask, deleteTask, getAllTasksByUserId, updateTask } from '@/services/task/task.service';
+import TaskItem from '@/components/task/TaskItem.vue';
+import { createTask, deleteTask, getAllTasksByUserId, updateTask, checkTaskServiceHealth } from '@/services/task/task.service';
 import { useUserStore } from '@/stores/userStore';
 import type { CreateTask, Task, UpdateTask } from '@/types/task';
 import Splitter from 'primevue/splitter';
@@ -8,11 +8,11 @@ import SplitterPanel from 'primevue/splitterpanel';
 import { computed, onMounted, ref, type Ref } from 'vue';
 import { useRouter } from 'vue-router';
 
-
 const userStore = useUserStore()
+const router = useRouter()
 const user = userStore.getUser
+const loading = ref(false)
 if (user === null) {
-  const router = useRouter()
   router.push('/login')
 }
 
@@ -59,7 +59,27 @@ const fetchTasks = async () => {
 }
 
 onMounted(async () => {
-  await fetchTasks()
+  loading.value = true
+  const healthy = await checkTaskServiceHealth()
+  if (!healthy) {
+    loading.value = false
+    alert('Task-service không khả dụng')
+    router.push('/dashboard')
+    return
+  }
+  if (user === null) {
+    loading.value = false
+    router.push('/login')
+    return
+  }
+  try {
+    await fetchTasks()
+  } catch (error) {
+    alert('Task-service không khả dụng')
+    router.push('/dashboard')
+  } finally {
+    loading.value = false
+  }
 })
 
 console.log(todoTasks.value)
@@ -243,8 +263,13 @@ const handleDeleteTask = async (taskId: number) => {
 
 <template>
   <div class="card">
-    <!-- :min-size và layout có thể cần điều chỉnh lại -->
-    <Splitter class="h-[calc(100vh-10rem)] mb-8 border border-gray-200 rounded-md overflow-hidden">
+    <div v-if="loading" class="fixed inset-0 flex items-center justify-center bg-black bg-opacity-30 z-50">
+      <div class="flex flex-col items-center">
+        <span class="loader mb-2"></span>
+        <span class="text-gray-700 font-semibold">Đang tải dữ liệu...</span>
+      </div>
+    </div>
+    <Splitter v-else class="h-[calc(100vh-10rem)] mb-8 border border-gray-200 rounded-md overflow-hidden">
       <!-- === TO DO Panel === -->
       <SplitterPanel class="flex flex-col" :min-size="20">
         <!-- Header -->
@@ -325,18 +350,28 @@ const handleDeleteTask = async (taskId: number) => {
 </template>
 
 <style scoped>
-/* Thêm style nếu cần, ví dụ đảm bảo chiều cao và scroll */
 .card {
   padding: 1rem;
   /* Hoặc padding khác tùy layout tổng thể */
 }
 
-/* Style cho nút add task */
 .p-button-sm i {
   font-size: 1rem;
   /* Điều chỉnh kích thước icon nếu cần */
 }
 
-/* Style cho tooltip (nếu bạn dùng directive v-tooltip của PrimeVue) */
-/* Cần import và đăng ký Tooltip */
+/* Loader style */
+.loader {
+  border: 4px solid #e5e7eb;
+  border-top: 4px solid #6366f1;
+  border-radius: 50%;
+  width: 36px;
+  height: 36px;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
 </style>
