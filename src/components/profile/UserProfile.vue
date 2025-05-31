@@ -57,6 +57,11 @@ async function toggleEdit(field: string) {
           alert('Passwords do not match')
           return
         }
+        // If password is empty, user wants to keep the same password
+        if (!editableUser.value.password) {
+          isEditing.value = null
+          return
+        }
         await changePassword(editableUser.value.password)
       }
     } catch (error) {
