@@ -3,12 +3,12 @@ import type { User } from '@/types/user'
 
 export const updateUser = async (id: number, updateUser: Partial<Omit<User, 'user_id'>>) => {
     const response = await userServiceAxiosInstance.patch(`/api/user/${id}`, updateUser)
-    return response.data
+    return { ...response.data, user_id: response.data.id, id: undefined }
 }
 
 export const getUser = async (id: string) => {
     const response = await userServiceAxiosInstance.get(`/api/user/${id}`)
-    return response.data
+    return { ...response.data, user_id: response.data.id, id: undefined }
 }
 
 export const changePassword = async (password: string) => {

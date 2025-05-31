@@ -3,6 +3,7 @@ import type { User } from '@/types/user'
 import { authServiceAxiosInstance } from '@/services'
 import { useUserStore } from '@/stores/userStore'
 import type { Token } from '@/types/token'
+
 export const login = async (email: string, password: string) => {
   try {
     const response = await authServiceAxiosInstance.post('/api/auth/login', {
