@@ -25,3 +25,12 @@ export const deleteTask = async (id: number) => {
 	const response = await taskServiceAxiosInstance.delete(`/api/task/${id}`)
 	return response.data
 }
+
+export const checkTaskServiceHealth = async () => {
+    try {
+        await taskServiceAxiosInstance.get('/api/health')
+        return true
+    } catch {
+        return false
+    }
+}
